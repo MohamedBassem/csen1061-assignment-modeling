@@ -6,10 +6,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 ```
 
-```{r}
+```{r, echo=FALSE}
 library("dplyr")
 library("caret")
 library("knitr")
@@ -71,7 +71,12 @@ sample_data <- function(data, class_column_last) {
 ```
 ```{r}
 train_and_evaluate_model <- function(data, method){
-  model <- train(data$obs, data$class, method = method, trControl=fitControl)
+  if(method == "nnet"){
+    model <- train(data$obs, data$class, method = method, trControl=fitControl, trace=FALSE)
+    
+  }else{
+    model <- train(data$obs, data$class, method = method, trControl=fitControl)
+  }
   return(evaluate_performance(model$pred$pred, model$pred$obs))
 }
 
@@ -125,13 +130,13 @@ sonar_eval <- train_and_evaluate_all_models(sonar_data)
 ```{r}
 model <- train(sonar_data$obs, sonar_data$class, method = "J48")
 predictions <- predict(model, sonar_data$obs)
-evaluate_performance(predictions, sonar_data$class)
+evaluate_performance(predictions, sonar_data$class) %>% data.frame %>% kable
 ```
 
 ### Testing using k-fold validation
 
 ```{r}
-sonar_eval$c45
+sonar_eval$c45 %>% data.frame %>% kable
 ```
 
 ## Part 3
@@ -139,27 +144,27 @@ sonar_eval$c45
 ### Random Forest
 
 ```{r}
-sonar_eval$rf
+sonar_eval$rf %>% data.frame %>% kable
 ```
 
 ### Support Vector Machine
 
 ```{r}
-sonar_eval$svm
+sonar_eval$svm %>% data.frame %>% kable
 ```
 
 
 ### Naive Bayes
 
 ```{r}
-sonar_eval$nb
+sonar_eval$nb %>% data.frame %>% kable
 ```
 
 
 ### Neural Network
 
 ```{r}
-sonar_eval$nnet
+sonar_eval$nnet %>% data.frame %>% kable
 ```
 
 ### Bagging
