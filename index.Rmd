@@ -1,0 +1,129 @@
+---
+title: "Evaluation"
+author: "Mohamed Bassem"
+date: "April 15, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("dplyr")
+library("caret")
+library("knitr")
+```
+
+
+## Helper functions
+```{r}
+fitControl <- trainControl(## 10-fold CV
+                           method = "repeatedcv",
+                           number = 10,
+                           ## repeated ten times
+                           repeats = 10,
+                           savePredictions = TRUE)
+
+evaluate_performance <- function(predicted, actual) {
+  cmat <- confusionMatrix(predicted, actual)$table
+  
+  TP <- cmat[1,1]
+  FN <- cmat[1,2]
+  FP <- cmat[2,1]
+  TN <- cmat[2,2]
+  
+  ret <- list(
+    Accuracy = (TP+TN)/(TP+FN+FP+TN),
+    Precision = (TP/(TP+FP)),
+    Recall = (TP/(TP+FN))
+  )
+  
+  ret$F1 <- (2*ret$Precision*ret$Recall)/(ret$Precision + ret$Recall)
+  return(ret)
+}
+
+sample_data <- function(data) {
+  trainIdx <- createDataPartition(data[,length(names(data))], p=.8, list=FALSE)
+  train <- data[trainIdx, ]
+  test <- data[-trainIdx, ]
+  return(list(
+    full = list(
+      obs = data[,1:(length(names(data))-1)],
+      class = data[,length(names(data))]
+    ),
+    train = list(
+        obs = train[,1:(length(names(train))-1)],
+        class = train[,length(names(train))]
+      ),
+    test = list(
+        obs = test[,1:(length(names(test))-1)],
+        class = test[,length(names(test))]
+    )
+  ))
+}
+
+```
+
+## Part 1
+
+```{r}
+sonar_data <- read.csv("./sonar/sonar.csv") %>% sample_data
+```
+
+## Part 2
+
+### Testing on all data
+
+```{r}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "J48")
+predictions <- predict(model, sonar_data$full$obs)
+evaluate_performance(predictions, sonar_data$full$class)
+```
+
+### Testing using k-fold validation
+
+```{r}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "J48", trControl=fitControl)
+evaluate_performance(model$pred$pred, model$pred$obs)
+```
+
+## Part 3
+
+### Random Forest
+
+```{r}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "rf", trControl=fitControl)
+evaluate_performance(model$pred$pred, model$pred$obs)
+```
+
+### Support Vector Machine
+
+```{r}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "svmLinear", trControl=fitControl)
+evaluate_performance(model$pred$pred, model$pred$obs)
+```
+
+
+### Naive Bayes
+
+```{r}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "nb", trControl=fitControl)
+evaluate_performance(model$pred$pred, model$pred$obs)
+```
+
+
+### Neural Network
+
+```{r, results=FALSE}
+model <- train(sonar_data$full$obs, sonar_data$full$class, method = "nnet", trControl=fitControl)
+```
+
+```{r}
+evaluate_performance(model$pred$pred, model$pred$obs)
+```
+
+
+### Bagging
+
+### Boosting
