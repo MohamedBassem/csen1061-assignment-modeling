@@ -24,8 +24,8 @@ The function responsible for doing the k-fold cross validation, used in the care
 fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
                            number = 10,
-                           ## repeated ten times
-                           repeats = 10,
+                           ## NOTE : For repeated CV, change this value to 10, but it's too slow
+                           repeats = 1,
                            savePredictions = TRUE)
 ```
 
