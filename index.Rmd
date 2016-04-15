@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 ```
 
-```{r, results=FALSE}
+```{r, results=FALSE,include=FALSE}
 library("dplyr")
 library("caret")
 library("knitr")
@@ -17,6 +17,9 @@ library("knitr")
 
 
 ## Helper functions
+
+The function responsible for doing the k-fold cross validation, used in the caret::train function.
+
 ```{r}
 fitControl <- trainControl(## 10-fold CV
                            method = "repeatedcv",
@@ -25,6 +28,9 @@ fitControl <- trainControl(## 10-fold CV
                            repeats = 10,
                            savePredictions = TRUE)
 ```
+
+The evaluation performance function that calculates the accuracy, precision, etc ..
+
 ```{r}
 evaluate_performance <- function(predicted, actual) {
   cmat <- confusionMatrix(predicted, actual)$table
@@ -45,10 +51,12 @@ evaluate_performance <- function(predicted, actual) {
 }
 
 ```
+
+A function to split the dataset into obs and class required for training
+
 ```{r}
 sample_data <- function(data, class_column_last) {
   data <- data[, colSums(is.na(data)) == 0 ]
-  #data <- data %>% sample_n(10)
   class_column <- 1
   if(class_column_last){
     class_column <- length(names(data))
@@ -67,8 +75,8 @@ sample_data <- function(data, class_column_last) {
   ))
 }
 
-
 ```
+
 ```{r}
 train_and_evaluate_model <- function(data, method){
   if(method == "nnet"){
@@ -93,8 +101,8 @@ train_and_evaluate_all_models <- function(data){
   ))
 }
 ```
-```{r}
 
+```{r}
 datasets <- c("sonar_eval", "spect_eval", "pima_eval")
 models <- c("c45", "rf", "svm", "nb", "nnet","bagging", "boosting")
 
@@ -121,13 +129,11 @@ pima_data <- read.csv("pima/pima-indians-diabetes.csv", header=FALSE) %>% sample
 
 ```
 
-## Part 2
-
-```{r, results=FALSE}
-sonar_eval <- train_and_evaluate_all_models(sonar_data)
-```
+## C4.5 on Sonar dataset
 
 ### Testing on all data
+
+Let's train a C4.5 classifier with all our dataset and then evaluate it using the same dataset.
 
 ```{r, results=FALSE}
 model <- train(sonar_data$obs, sonar_data$class, method = "J48")
@@ -135,13 +141,23 @@ predictions <- predict(model, sonar_data$obs)
 evaluate_performance(predictions, sonar_data$class) %>% data.frame %>% kable
 ```
 
+As you can see from the results, the model was already trained with this data, so it's overfitted on this data. That's why all the metrics that high. It's a bad evaluation technique. That's why we are going to use k-fold cross validation for all our further analysis.
+
 ### Testing using k-fold validation
+
+First, Let's train all the models we have with the sonar dataset.
+
+```{r, results=FALSE, include=FALSE}
+sonar_eval <- train_and_evaluate_all_models(sonar_data)
+```
 
 ```{r}
 sonar_eval$c45 %>% data.frame %>% kable
 ```
 
-## Part 3
+As you can see, using the k-fold cross validation made the evaluation much better.
+
+## Other classifiers
 
 ### Random Forest
 
@@ -181,7 +197,11 @@ sonar_eval$bagging %>% data.frame %>% kable
 sonar_eval$boosting %>% data.frame %>% kable
 ```
 
-## Part 4
+Since the boosting is an ensambling technique, it outperformed most of the other models. The bagging and boosting are also outperformning the C4.5 tree that they are based on.
+
+## Other datasets
+
+Let's load other dataset and prepare them for the analysis
 
 ```{r, results=FALSE}
 #hepatitis_eval <- train_and_evaluate_all_models(hepatitis_data)
@@ -189,28 +209,31 @@ spect_eval <- train_and_evaluate_all_models(spect_data)
 pima_eval <- train_and_evaluate_all_models(pima_data)
 ```
 
-### Accuracy
+### Dataset VS Model
+
+Here we will be comparing each model against each dataset to have a better comparison.
+
+#### Accuracy
 
 ```{r}
 format_comparison("Accuracy") %>% sapply(as.data.frame) %>% t %>% kable
 ```
 
-
-### Precision
+#### Precision
 
 ```{r}
 format_comparison("Precision") %>% sapply(as.data.frame) %>% t %>% kable
 ```
 
 
-### Recall
+#### Recall
 
 ```{r}
 format_comparison("Recall") %>% sapply(as.data.frame) %>% t %>% kable
 ```
 
 
-### F1
+#### F1
 
 ```{r}
 format_comparison("F1") %>% sapply(as.data.frame) %>% t %>% kable
@@ -237,28 +260,35 @@ who_win <- function(dataset,metric){
 ### Sonar
 
 ```{r}
-who_win("sonar_eval", "Accuracy") %>% data.frame %>% t %>% kable
-who_win("sonar_eval", "Precision") %>% data.frame %>% t %>% kable
-who_win("sonar_eval", "Recall") %>% data.frame %>% t %>% kable
-who_win("sonar_eval", "F1") %>% data.frame %>% t %>% kable
+who_win("sonar_eval", "Accuracy") %>% data.frame %>% t %>% kable(caption="Accuracy")
+who_win("sonar_eval", "Precision") %>% data.frame %>% t %>% kable(caption="Precision")
+who_win("sonar_eval", "Recall") %>% data.frame %>% t %>% kable(caption="Recall")
+who_win("sonar_eval", "F1") %>% data.frame %>% t %>% kable(caption="F1")
 ```
 
+In the sonar dataset, the boosting seems to outperform all other models in all the aspects (except for the precision), the second best model is the random forests.
 
 ### SPECT
 
 ```{r}
-who_win("spect_eval", "Accuracy") %>% data.frame %>% t %>% kable
-who_win("spect_eval", "Precision") %>% data.frame %>% t %>% kable
-who_win("spect_eval", "Recall") %>% data.frame %>% t %>% kable
-who_win("spect_eval", "F1") %>% data.frame %>% t %>% kable
+who_win("spect_eval", "Accuracy") %>% data.frame %>% t %>% kable(caption="Accuracy")
+who_win("spect_eval", "Precision") %>% data.frame %>% t %>% kable(caption="Precision")
+who_win("spect_eval", "Recall") %>% data.frame %>% t %>% kable(caption="Recall")
+who_win("spect_eval", "F1") %>% data.frame %>% t %>% kable(caption="F1")
 ```
 
+In the SPECT dataset, the bagging is wins all the metrics except the precision which the naive bays won.
 
 ### Pima
 
 ```{r}
-who_win("pima_eval", "Accuracy") %>% data.frame %>% t %>% kable
-who_win("pima_eval", "Precision") %>% data.frame %>% t %>% kable
-who_win("pima_eval", "Recall") %>% data.frame %>% t %>% kable
-who_win("pima_eval", "F1") %>% data.frame %>% t %>% kable
+who_win("pima_eval", "Accuracy") %>% data.frame %>% t %>% kable(caption="Accuracy")
+who_win("pima_eval", "Precision") %>% data.frame %>% t %>% kable(caption="Precision")
+who_win("pima_eval", "Recall") %>% data.frame %>% t %>% kable(caption="Recall")
+who_win("pima_eval", "F1") %>% data.frame %>% t %>% kable(caption="F1")
 ```
+
+In the pima dataset, there isn't a clear winner. Random Forests is competing with the SVM on the winner.
+
+
+As these comparison show, there isn't the concept of a the best model for all datasets. It depends on the dataset used.
