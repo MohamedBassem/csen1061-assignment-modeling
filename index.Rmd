@@ -24,7 +24,8 @@ fitControl <- trainControl(## 10-fold CV
                            ## repeated ten times
                            repeats = 10,
                            savePredictions = TRUE)
-
+```
+```{r}
 evaluate_performance <- function(predicted, actual) {
   cmat <- confusionMatrix(predicted, actual)$table
   
@@ -43,49 +44,94 @@ evaluate_performance <- function(predicted, actual) {
   return(ret)
 }
 
-sample_data <- function(data) {
-  trainIdx <- createDataPartition(data[,length(names(data))], p=.8, list=FALSE)
+```
+```{r}
+sample_data <- function(data, class_column_last) {
+  data <- data[, colSums(is.na(data)) == 0 ]
+  #data <- data %>% sample_n(10)
+  class_column <- 1
+  if(class_column_last){
+    class_column <- length(names(data))
+  }
+  
+  if(is.integer(data[,class_column])){
+    data[,class_column] <- as.factor(data[,class_column])
+  }
+  
+  trainIdx <- createDataPartition(data[,class_column], p=.8, list=FALSE)
   train <- data[trainIdx, ]
   test <- data[-trainIdx, ]
   return(list(
-    full = list(
-      obs = data[,1:(length(names(data))-1)],
-      class = data[,length(names(data))]
-    ),
-    train = list(
-        obs = train[,1:(length(names(train))-1)],
-        class = train[,length(names(train))]
-      ),
-    test = list(
-        obs = test[,1:(length(names(test))-1)],
-        class = test[,length(names(test))]
-    )
+    obs = data[,-class_column],
+    class = data[,class_column]
   ))
 }
 
+
+```
+```{r}
+train_and_evaluate_model <- function(data, method){
+  model <- train(data$obs, data$class, method = method, trControl=fitControl)
+  return(evaluate_performance(model$pred$pred, model$pred$obs))
+}
+
+```
+```{r}
+train_and_evaluate_all_models <- function(data){
+  return(list(
+    c45 = train_and_evaluate_model(data, "J48"),
+    rf = train_and_evaluate_model(data, "rf"),
+    svm = train_and_evaluate_model(data, "svmLinear"),
+    nb = train_and_evaluate_model(data, "nb"),
+    nnet = train_and_evaluate_model(data, "nnet")
+  ))
+}
+```
+```{r}
+format_comparison <- function(metric){
+  datasets <- c("sonar_eval", "spect_eval", "pima_eval")
+  models <- c("c45", "rf", "svm", "nb", "nnet")
+  
+  ret <- list()
+  
+  for(dataset in datasets){
+    ret[[dataset]] <- list()
+    for(model in models){
+      ret[[dataset]][[model]] <- get(dataset)[[model]][[metric]]
+    }
+  }
+  return(ret)
+}
 ```
 
-## Part 1
+## Loading Data
 
 ```{r}
-sonar_data <- read.csv("./sonar/sonar.csv") %>% sample_data
+sonar_data <- read.csv("./sonar/sonar.csv", header=FALSE) %>% sample_data(TRUE)
+hepatitis_data <- read.csv("hepatitis/hepatitis.csv", header=FALSE) %>% dplyr::select(-V16, -V17) %>% sample_data(FALSE)
+spect_data <- read.csv("SPECT/SPECT.train.csv", header = FALSE) %>% sample_data(FALSE)
+pima_data <- read.csv("pima/pima-indians-diabetes.csv", header=FALSE) %>% sample_data(TRUE)
+
 ```
 
 ## Part 2
 
+```{r, results=FALSE}
+sonar_eval <- train_and_evaluate_all_models(sonar_data)
+```
+
 ### Testing on all data
 
 ```{r}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "J48")
-predictions <- predict(model, sonar_data$full$obs)
-evaluate_performance(predictions, sonar_data$full$class)
+model <- train(sonar_data$obs, sonar_data$class, method = "J48")
+predictions <- predict(model, sonar_data$obs)
+evaluate_performance(predictions, sonar_data$class)
 ```
 
 ### Testing using k-fold validation
 
 ```{r}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "J48", trControl=fitControl)
-evaluate_performance(model$pred$pred, model$pred$obs)
+sonar_eval$c45
 ```
 
 ## Part 3
@@ -93,37 +139,65 @@ evaluate_performance(model$pred$pred, model$pred$obs)
 ### Random Forest
 
 ```{r}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "rf", trControl=fitControl)
-evaluate_performance(model$pred$pred, model$pred$obs)
+sonar_eval$rf
 ```
 
 ### Support Vector Machine
 
 ```{r}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "svmLinear", trControl=fitControl)
-evaluate_performance(model$pred$pred, model$pred$obs)
+sonar_eval$svm
 ```
 
 
 ### Naive Bayes
 
 ```{r}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "nb", trControl=fitControl)
-evaluate_performance(model$pred$pred, model$pred$obs)
+sonar_eval$nb
 ```
 
 
 ### Neural Network
 
-```{r, results=FALSE}
-model <- train(sonar_data$full$obs, sonar_data$full$class, method = "nnet", trControl=fitControl)
-```
-
 ```{r}
-evaluate_performance(model$pred$pred, model$pred$obs)
+sonar_eval$nnet
 ```
-
 
 ### Bagging
 
 ### Boosting
+
+## Part 4
+
+```{r, results=FALSE}
+#hepatitis_eval <- train_and_evaluate_all_models(hepatitis_data)
+spect_eval <- train_and_evaluate_all_models(spect_data)
+pima_eval <- train_and_evaluate_all_models(pima_data)
+```
+
+### Accuracy
+
+```{r}
+format_comparison("Accuracy") %>% sapply(as.data.frame) %>% t %>% kable
+```
+
+
+### Precision
+
+```{r}
+format_comparison("Precision") %>% sapply(as.data.frame) %>% t %>% kable
+```
+
+
+### Recall
+
+```{r}
+format_comparison("Recall") %>% sapply(as.data.frame) %>% t %>% kable
+```
+
+
+### F1
+
+```{r}
+format_comparison("F1") %>% sapply(as.data.frame) %>% t %>% kable
+```
+
