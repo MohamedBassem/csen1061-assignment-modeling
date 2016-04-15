@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 ```
 
-```{r, echo=FALSE}
+```{r, results=FALSE}
 library("dplyr")
 library("caret")
 library("knitr")
@@ -127,7 +127,7 @@ sonar_eval <- train_and_evaluate_all_models(sonar_data)
 
 ### Testing on all data
 
-```{r}
+```{r, results=FALSE}
 model <- train(sonar_data$obs, sonar_data$class, method = "J48")
 predictions <- predict(model, sonar_data$obs)
 evaluate_performance(predictions, sonar_data$class) %>% data.frame %>% kable
