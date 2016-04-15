@@ -93,10 +93,11 @@ train_and_evaluate_all_models <- function(data){
 }
 ```
 ```{r}
+
+datasets <- c("sonar_eval", "spect_eval", "pima_eval")
+models <- c("c45", "rf", "svm", "nb", "nnet")
+
 format_comparison <- function(metric){
-  datasets <- c("sonar_eval", "spect_eval", "pima_eval")
-  models <- c("c45", "rf", "svm", "nb", "nnet")
-  
   ret <- list()
   
   for(dataset in datasets){
@@ -206,3 +207,49 @@ format_comparison("Recall") %>% sapply(as.data.frame) %>% t %>% kable
 format_comparison("F1") %>% sapply(as.data.frame) %>% t %>% kable
 ```
 
+
+## Wins
+
+```{r}
+
+who_win <- function(dataset,metric){
+  tmp <- format_comparison(metric) %>% sapply(as.data.frame) %>% data.frame
+  tmp
+  
+  sapply(models, function(model1){
+    sets <- sapply(models, function(model2){
+      unlist(tmp[model1,dataset]) > unlist(tmp[model2,dataset])
+    })
+    sum(sets)
+  })
+}
+```
+
+### Sonar
+
+```{r}
+who_win("sonar_eval", "Accuracy") %>% data.frame %>% t %>% kable
+who_win("sonar_eval", "Precision") %>% data.frame %>% t %>% kable
+who_win("sonar_eval", "Recall") %>% data.frame %>% t %>% kable
+who_win("sonar_eval", "F1") %>% data.frame %>% t %>% kable
+```
+
+
+### SPECT
+
+```{r}
+who_win("spect_eval", "Accuracy") %>% data.frame %>% t %>% kable
+who_win("spect_eval", "Precision") %>% data.frame %>% t %>% kable
+who_win("spect_eval", "Recall") %>% data.frame %>% t %>% kable
+who_win("spect_eval", "F1") %>% data.frame %>% t %>% kable
+```
+
+
+### Pima
+
+```{r}
+who_win("pima_eval", "Accuracy") %>% data.frame %>% t %>% kable
+who_win("pima_eval", "Precision") %>% data.frame %>% t %>% kable
+who_win("pima_eval", "Recall") %>% data.frame %>% t %>% kable
+who_win("pima_eval", "F1") %>% data.frame %>% t %>% kable
+```
