@@ -73,7 +73,6 @@ sample_data <- function(data, class_column_last) {
 train_and_evaluate_model <- function(data, method){
   if(method == "nnet"){
     model <- train(data$obs, data$class, method = method, trControl=fitControl, trace=FALSE)
-    
   }else{
     model <- train(data$obs, data$class, method = method, trControl=fitControl)
   }
@@ -88,14 +87,16 @@ train_and_evaluate_all_models <- function(data){
     rf = train_and_evaluate_model(data, "rf"),
     svm = train_and_evaluate_model(data, "svmLinear"),
     nb = train_and_evaluate_model(data, "nb"),
-    nnet = train_and_evaluate_model(data, "nnet")
+    nnet = train_and_evaluate_model(data, "nnet"),
+    bagging = train_and_evaluate_model(data, "treebag"),
+    boosting = train_and_evaluate_model(data, "adaboost")
   ))
 }
 ```
 ```{r}
 
 datasets <- c("sonar_eval", "spect_eval", "pima_eval")
-models <- c("c45", "rf", "svm", "nb", "nnet")
+models <- c("c45", "rf", "svm", "nb", "nnet","bagging", "boosting")
 
 format_comparison <- function(metric){
   ret <- list()
@@ -170,7 +171,15 @@ sonar_eval$nnet %>% data.frame %>% kable
 
 ### Bagging
 
+```{r}
+sonar_eval$bagging %>% data.frame %>% kable
+```
+
 ### Boosting
+
+```{r}
+sonar_eval$boosting %>% data.frame %>% kable
+```
 
 ## Part 4
 
